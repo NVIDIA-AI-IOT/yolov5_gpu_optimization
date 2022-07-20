@@ -1,0 +1,5 @@
+seaborn
+nvidia-pyindex
+onnx-graphsurgeon
+opencv-python==4.5.5.64
+onnx-simplifier==0.3.10
