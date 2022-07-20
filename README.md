@@ -5,8 +5,8 @@ You could start from nvcr.io/nvidia/pytorch:22.03-py3 container for export.
 ```
 git clone https://github.com/ultralytics/yolov5.git
 # clone yolov5_trt_infer repo and copy files into yolov5 folder
-git clone <public path to yolov5_trt_infer>
-cp yolov5_trt_infer/* yolov5/
+git clone https://github.com/NVIDIA-AI-IOT/yolov5_gpu_optimization.git
+cp yolov5_gpu_optimization/* yolov5/
 cd yolov5
 git checkout a80dd66efe0bc7fe3772f259260d5b7278aab42f
 git am 0001-Enable-onnx-export-with-batchNMS-plugin.patch
