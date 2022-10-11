@@ -6,7 +6,7 @@ You could start from nvcr.io/nvidia/pytorch:22.03-py3 container for export.
 git clone https://github.com/ultralytics/yolov5.git
 # clone yolov5_trt_infer repo and copy files into yolov5 folder
 git clone https://github.com/NVIDIA-AI-IOT/yolov5_gpu_optimization.git
-cp yolov5_gpu_optimization/* yolov5/
+cp -r yolov5_gpu_optimization/* yolov5/
 cd yolov5
 git checkout a80dd66efe0bc7fe3772f259260d5b7278aab42f
 git am 0001-Enable-onnx-export-with-batchNMS-plugin.patch
@@ -43,25 +43,16 @@ python yolov5_trt_inference.py --input_images_folder=</path/to/coco/images/val20
 ```
 
 
-To run int8 inference or evaluation, you need to install TensorRT 8.4 in the container.
- - download the TensorRT 8.4 tar ball from [devzone](https://developer.nvidia.com/tensorrt)
-   - Download the tar package. (e.g: [TensorRT 8.4 GA for Linux x86_64 and CUDA 11.0, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6 and 11.7 TAR Package](https://developer.nvidia.com/compute/machine-learning/tensorrt/secure/8.4.1/tars/tensorrt-8.4.1.5.linux.x86_64-gnu.cuda-11.6.cudnn8.4.tar.gz))
- - extract the files and install new tensorrt python wheel:
- ```
- tar zxvf TensorRT-8.4.1.5.Linux.x86_64-gnu.cuda-11.6.cudnn8.4.tar.gz
- cd TensorRT-8.4.1.5/python
- pip install tensorrt-8.4.1.5-cp38-none-linux_x86_64.whl
- ```
- - set the LD_LIBRARY_PATH:
- ```
- export LD_LIBRARY_PATH=</path/to/TensorRT-8.4 lib>:$LD_LIBRARY_PATH
- ```
+### Eavaluation in INT8 mode
+To run int8 inference or evaluation, you need to install TensorRT above 8.4. You could start from `nvcr.io/nvidia/tensorrt:22.07-py3`
 
-Following command is to run evaluation in int8 precision:
+Following command is to run evaluation in int8 precision (and calibration cache will be saved into the path specify by `--calib_cache`):
 ```
 # INT8 precision
 python yolov5_trt_inference.py --input_images_folder=</path/to/coco/images/val2017/> --output_images_folder=<path/to/coco_output_dir> --onnx=</path/to/yolov5s.onnx> --coco_anno=</path/to/coco/annotations/instances_val2017.json> --rect --data_type=int8 --save_engine=./yolov5s_int8_maxbs16.engine  --calib_img_dir=</path/to/coco/images/val2017/> --calib_cache=yolov5s_bs16_n10.cache --n_batches=10 --batch_size=16 
 ```
+
+**Notes**: The calibration algorithm for YOLOV5 is `IInt8MinMaxCalibrator` instead of `IInt8EntropyCalibrator2`. So if you want to play with `trtexec` with the saved calibration cache, you have to change the first line of cache from `MinMaxCalibration` to `EntropyCalibration2`.
 
 ## Appendix
 
@@ -99,8 +90,11 @@ performance gain:
 
 *Note*: small score bits may slightly decrease the final mAP. 
 
+### DeepStream deployment:
+Users can intergrate the YOLOV5 into DeepStream following [deepstream_tao_apps](https://github.com/NVIDIA-AI-IOT/deepstream_tao_apps)
+
 ## Known issue:
 
-- int8 0% mAP in TensorRT 8.2.5: Install TensorRT 8.4 to avoid the issue.
+- int8 0% mAP in TensorRT 8.2.5: Install TensorRT above 8.4 to avoid the issue.
 - Dynamic shape inference: The dynamic shape inference will run into CUDA error with some specific shapes. 
 - TensorRT warning at the end of the execution: The warning won't block the inference or evaluation. You can just ignore it.
