@@ -93,6 +93,37 @@ performance gain:
 ### DeepStream deployment:
 Users can intergrate the YOLOV5 into DeepStream following [deepstream_tao_apps](https://github.com/NVIDIA-AI-IOT/deepstream_tao_apps)
 
+#### YOLOV5 with different activation:
+We conducted experiments with different activations for pursing better trade-off between mAP and performance on TensorRT.
+
+You can change the activation of YOLOV5 model in `yolov5/models/common.py`:
+```
+class Conv(nn.Module):
+    # Standard convolution
+    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
+        super().__init__()
+        self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)
+        self.bn = nn.BatchNorm2d(c2)
+        # self.act = nn.SiLU() if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
+        self.act = nn.ReLU() if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
+
+    def forward(self, x):
+        return self.act(self.bn(self.conv(x)))
+
+    def forward_fuse(self, x):
+        return self.act(self.conv(x))
+```
+
+YOLOV5s experiments results so far:
+
+|     Activation type     |     mAP@0.5                                          |     V100 --best FPS (bs = 32)    |     A10  --best FPS (bs=32)    |
+|-------------------------|------------------------------------------------------|----------------------------------|--------------------------------|
+|     swish (baseline)    |     56.7%                                            |     1047                         |     965                        |
+|     ReLU                |     54.8% (scratch)<br>55.7% (swish pretrained)      |     1177                         |     1065                       |
+|     GELU                |     56.6%                                            |     1004                         |     916                        |
+|     Leaky ReLU          |     55.0%                                            |     1172                         |     892                        |
+|     PReLU               |     54.8%                                            |     1123                         |     932                        |
+
 ## Known issue:
 
 - int8 0% mAP in TensorRT 8.2.5: Install TensorRT above 8.4 to avoid the issue.
