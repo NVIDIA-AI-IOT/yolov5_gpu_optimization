@@ -93,7 +93,7 @@ performance gain:
 ### DeepStream deployment:
 Users can intergrate the YOLOV5 into DeepStream following [deepstream_tao_apps](https://github.com/NVIDIA-AI-IOT/deepstream_tao_apps)
 
-#### YOLOV5 with different activation:
+### YOLOV5 with different activation:
 We conducted experiments with different activations for pursing better trade-off between mAP and performance on TensorRT.
 
 You can change the activation of YOLOV5 model in `yolov5/models/common.py`:
