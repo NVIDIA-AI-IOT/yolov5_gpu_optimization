@@ -8,7 +8,7 @@ rows=1
 columns=1
 width=1280
 height=720
-gpu-id=1
+gpu-id=0
 nvbuf-memory-type=0
 
 [source0]
@@ -16,19 +16,19 @@ enable=1
 type=3
 uri=file:///opt/nvidia/deepstream/deepstream/samples/streams/sample_1080p_h264.mp4
 num-sources=8
-gpu-id=1
+gpu-id=0
 cudadec-memtype=0
 
 [sink0]
 enable=0
 type=2
 sync=0
-gpu-id=1
+gpu-id=0
 nvbuf-memory-type=0
 
 [osd]
 enable=0
-gpu-id=1
+gpu-id=0
 border-width=5
 text-size=15
 text-color=1;1;1;1;
@@ -42,7 +42,7 @@ clock-color=1;0;0;0
 nvbuf-memory-type=0
 
 [streammux]
-gpu-id=1
+gpu-id=0
 live-source=0
 batch-size=8
 batched-push-timeout=40000
@@ -53,7 +53,7 @@ nvbuf-memory-type=0
 
 [primary-gie]
 enable=1
-gpu-id=1
+gpu-id=0
 gie-unique-id=1
 nvbuf-memory-type=0
 config-file=config/config_infer_primary_yoloV5_bs8.txt
