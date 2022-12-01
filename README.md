@@ -1,12 +1,80 @@
-# YOLOV5 TensorRT inference sample
+# YOLOV5 inference solution in DeepStream and TensorRT
+This repo provides sample codes to deploy YOLOV5 models in DeepStream or stand-alone TensorRT sample on Nvidia devices.
 
-## Export the ultralytics YOLOV5 model to ONNX with TRT BatchNMS plugin
+* [DeepStream sample](#deepstream-sample)
+* [TensorRT sample](#tensorrt-sample)
+* [Appendix](#appendix)
+
+## DeepStream sample
+In this section, we will walk through the steps to run YOLOV5 model using DeepStream with CPU NMS.
+### Export the ultralytics YOLOV5 model to ONNX with TRT decode plugin
+You could start from nvcr.io/nvidia/pytorch:22.03-py3 container for export.
+```
+git clone https://github.com/ultralytics/yolov5.git
+# clone yolov5_trt_infer repo and copy the patch into yolov5 folder
+git clone https://github.com/NVIDIA-AI-IOT/yolov5_gpu_optimization.git
+cp yolov5_gpu_optimization/0001-Enable-onnx-export-with-decode-plugin.patch yolov5_gpu_optimization/requirement_export.txt yolov5/
+cd yolov5
+git checkout a80dd66efe0bc7fe3772f259260d5b7278aab42f
+git am 0001-Enable-onnx-export-with-decode-plugin.patch
+pip install -r requirement_export.txt
+apt update && apt install -y libgl1-mesa-glx 
+python export.py --weights yolov5s.pt --include onnx --simplify --dynamic
+```
+### Prepare the library for DeepStream inference.
+You could start from nvcr.io/nvidia/deepstream:6.1.1-devel container for inference.
+
+Then go to the deepstream sample directory.
+```
+cd deepstream-sample
+```
+Compile the plugin and deepstream parser:
+
+* On x86:
+    ```
+    nvcc -Xcompiler -fPIC -shared -o yolov5_decode.so ./yoloForward_nc.cu ./yoloPlugins.cpp ./nvdsparsebbox_Yolo.cpp -isystem /usr/include/x86_64-linux-gnu/ -L /usr/lib/x86_64-linux-gnu/ -I /opt/nvidia/deepstream/deepstream/sources/includes -lnvinfer 
+    ```
+* On Jetson device:
+    ```
+    nvcc -Xcompiler -fPIC -shared -o yolov5_decode.so ./yoloForward_nc.cu ./yoloPlugins.cpp ./nvdsparsebbox_Yolo.cpp -isystem /usr/include/aarch64-linux-gnu/ -L /usr/lib/aarch64-linux-gnu/ -I /opt/nvidia/deepstream/deepstream/sources/includes -lnvinfer 
+    ```
+### Run inference
+You could place the exported onnx models to `deepstream-sample`
+```
+cp yolov5/yolov5s.onnx yolov5_gpu_optimization/deepstream-sample/
+```
+Then you could run the model pre-defined configs.
+
+* Run inference with saving inferened video:
+    ```
+    deepstream-app -c config/deepstream_app_config_save_video.txt 
+    ```
+* Run inference without display
+    ```
+    deepstream-app -c config/deepstream_app_config.txt 
+    ```
+* Run inference with 8 streams and batch_size=8 and without display
+    ```
+    deepstream-app -c config/deepstream_app_config_8s.txt 
+    ```
+
+### Performance summary:
+The performance test is conducted on T4 with nvcr.io/nvidia/deepstream:6.1.1-devel
+
+| Model   | Input Size | Device | precision | 1 stream bs=1 | 4 streams bs=4 | 8 streams bs=8 |
+|---------|------------|--------|-----------|---------------|----------------|----------------|
+| yolov5n | 3x640x640  | T4     | FP16      | 640           | 980            | 988            |
+| yolov5m | 3x640x640  | T4     | FP16      | 220           | 270            | 277            |
+
+## TensorRT sample
+In this section, we will walk through the steps to run YOLOV5 model using GPU NMS with stand-alone inference script.
+### Export the ultralytics YOLOV5 model to ONNX with TRT BatchNMS plugin
 You could start from nvcr.io/nvidia/pytorch:22.03-py3 container for export.
 ```
 git clone https://github.com/ultralytics/yolov5.git
 # clone yolov5_trt_infer repo and copy files into yolov5 folder
 git clone https://github.com/NVIDIA-AI-IOT/yolov5_gpu_optimization.git
-cp -r yolov5_gpu_optimization/* yolov5/
+cp -r yolov5_gpu_optimization/0001-Enable-onnx-export-with-batchNMS-plugin.patch yolov5_gpu_optimization/requirement_export.txt yolov5/
 cd yolov5
 git checkout a80dd66efe0bc7fe3772f259260d5b7278aab42f
 git am 0001-Enable-onnx-export-with-batchNMS-plugin.patch
@@ -15,35 +83,35 @@ apt update && apt install -y libgl1-mesa-glx
 python export.py --weights yolov5s.pt --include onnx --simplify --dynamic
 ```
 
-## Run with TensorRT:
+### Run with TensorRT:
 
 For the following section, you could start from nvcr.io/nvidia/tensorrt:22.05-py3 and prepare env by:
 ```
-cd yolov5
+cd tensorrt-sample
 pip install -r requirement_infer.txt
 apt update && apt install -y libgl1-mesa-glx 
 ```
-### Run inference
+#### Run inference
 ```
 python yolov5_trt_inference.py --input_images_folder=</path/to/coco/images/val2017/> --output_images_folder=./coco_output --onnx=</path/to/yolov5s.onnx>
 ```
-### Run evaluation on COCO17 validation dataset
+#### Run evaluation on COCO17 validation dataset
 
-#### Square inference evaluation:
+##### Square inference evaluation:
 The image will be resized to 3xINPUT_SIZExINPUT_SIZE while be kept aspect ratio.
 ```
 python yolov5_trt_inference.py --input_images_folder=</path/to/coco/images/val2017/> --output_images_folder=<path/to/coco_output_dir> --onnx=</path/to/yolov5s.onnx> --coco_anno=</path/to/coco/annotations/instances_val2017.json> 
 ```
 
-#### Rectangular inference evaluation:
-This is not real rectangular inference as in pytorch due to some dynmaic shape limitation in TensorRT. It is same to setting `pad=0, rect=False, imgsz=input_size + stride` in ultralytics YOLOV5.
+##### Rectangular inference evaluation:
+This is not real rectangular inference as in pytorch. It is same to setting `pad=0, rect=False, imgsz=input_size + stride` in ultralytics YOLOV5.
 ```
 # Default FP16 precision
 python yolov5_trt_inference.py --input_images_folder=</path/to/coco/images/val2017/> --output_images_folder=<path/to/coco_output_dir> --onnx=</path/to/yolov5s.onnx> --coco_anno=</path/to/coco/annotations/instances_val2017.json> --rect
 ```
 
 
-### Eavaluation in INT8 mode
+#### Eavaluation in INT8 mode
 To run int8 inference or evaluation, you need to install TensorRT above 8.4. You could start from `nvcr.io/nvidia/tensorrt:22.07-py3`
 
 Following command is to run evaluation in int8 precision (and calibration cache will be saved into the path specify by `--calib_cache`):
@@ -54,9 +122,9 @@ python yolov5_trt_inference.py --input_images_folder=</path/to/coco/images/val20
 
 **Notes**: The calibration algorithm for YOLOV5 is `IInt8MinMaxCalibrator` instead of `IInt8EntropyCalibrator2`. So if you want to play with `trtexec` with the saved calibration cache, you have to change the first line of cache from `MinMaxCalibration` to `EntropyCalibration2`.
 
-## Appendix
+### Misc for TensorRT sample
 
-### Performance&&mAP summary
+#### Performance&&mAP summary
 Here is the performance and mAP summary. Tested on V100 16G with TensorRT 8.2.5 in rectangular inference mode.
 
 | Model    | Input Size | precision | FPS bs=32 | FPS bs= 1 | mAP@0.5 |
@@ -72,7 +140,7 @@ Here is the performance and mAP summary. Tested on V100 16G with TensorRT 8.2.5 
 | yolov5l6 | 1280       | FP16      | 106       | 68        | 70.7%   |
 | yolov5x6 | 1280       | FP16      | 60        | 45        | 71.9%   |
 
-### nbit-NMS
+#### nbit-NMS
 Users can also enable nbit-NMS by changing the `scoreBits` in export.py. 
 ```python
 # Default to be 16-bit
@@ -90,9 +158,10 @@ performance gain:
 
 *Note*: small score bits may slightly decrease the final mAP. 
 
-### DeepStream deployment:
-Users can intergrate the YOLOV5 into DeepStream following [deepstream_tao_apps](https://github.com/NVIDIA-AI-IOT/deepstream_tao_apps)
+#### DeepStream deployment:
+Users can intergrate the YOLOV5 with BatchedNMS plugin into DeepStream following [deepstream_tao_apps](https://github.com/NVIDIA-AI-IOT/deepstream_tao_apps)
 
+## Appendix:
 ### YOLOV5 with different activation:
 We conducted experiments with different activations for pursing better trade-off between mAP and performance on TensorRT.
 
@@ -127,5 +196,4 @@ YOLOV5s experiments results so far:
 ## Known issue:
 
 - int8 0% mAP in TensorRT 8.2.5: Install TensorRT above 8.4 to avoid the issue.
-- Dynamic shape inference: The dynamic shape inference will run into CUDA error with some specific shapes. 
-- TensorRT warning at the end of the execution: The warning won't block the inference or evaluation. You can just ignore it.
+- TensorRT warning at the end of the execution of stand-alone tensorrt inference script: The warning won't block the inference or evaluation. You can just ignore it.
