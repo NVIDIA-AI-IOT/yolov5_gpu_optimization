@@ -91,6 +91,8 @@ cd tensorrt-sample
 pip install -r requirement_infer.txt
 apt update && apt install -y libgl1-mesa-glx 
 ```
+
+Build plugin library by following the [previous steps](#prepare-the-library-for-deepstream-inference).
 #### Run inference
 ```
 python yolov5_trt_inference.py --input_images_folder=</path/to/coco/images/val2017/> --output_images_folder=./coco_output --onnx=</path/to/yolov5s.onnx>

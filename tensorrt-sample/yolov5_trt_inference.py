@@ -12,7 +12,8 @@ from functools import partial
 import os
 from tqdm import tqdm
 from multiprocessing.pool import ThreadPool as Pool
-
+import ctypes
+G_YOLOV5_DECODE_LIB = ctypes.cdll.LoadLibrary('../deepstream-sample/yolov5_decode.so')
 
 INPUT_SIZE = 640
 CLASSES = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
