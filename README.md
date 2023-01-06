@@ -151,12 +151,12 @@ nms_attrs["scoreBits"] = 16
 # e.g. nms_attrs["scoreBits"] = 8
 ```
 performance gain:
-| Classes number | Device           | Anchors number | Score bits | Batch size | NMS Execution time (ms) |
-| -------------- | ---------------- | -------------  | ---------- | ---------- | ----------------------- |
-| 80             | A30              | 25200          | 16         | 32         | 12.1                    |
-| 80             | A30              | 25200          | 8          | 32         | 10.0                    |
-| 4              | Jetson Xavier NX | 10560          | 16         | 4          | 1.38                    |
-| 4              | Jetson Xavier NX | 10560          | 8          | 4          | 1.08                    |
+| Classes number | Device    | Anchors number | Score bits | Batch size | NMS Execution time (ms) |
+| -------------- | --------- | -------------  | ---------- | ---------- | ----------------------- |
+| 80             | A30       | 25200          | 16         | 32         | 12.1                    |
+| 80             | A30       | 25200          | 8          | 32         | 10.0                    |
+| 4              | Xavier NX | 10560          | 16         | 4          | 1.38                    |
+| 4              | Xavier NX | 10560          | 8          | 4          | 1.08                    |
 
 *Note*: small score bits may slightly decrease the final mAP. 
 
